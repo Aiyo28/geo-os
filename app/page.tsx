@@ -334,6 +334,50 @@ export default function Page() {
 					<InsightsDashboard data={{}} />
 				</div>
 			</section>
+
+			{/* Agent Orchestrator */}
+			<section className="mt-8 border-t border-geo-border bg-geo-panel/70">
+				<div className="container mx-auto px-4 py-8">
+					<div className="flex items-center gap-2 mb-6">
+						<div className="h-2 w-2 rounded-full bg-gradient-to-br from-geo-accent-blue to-geo-accent-orange geo-glow-blue" />
+						<h2 className="text-2xl font-bold">
+							Agent Orchestrator
+						</h2>
+					</div>
+					<div className="bg-gradient-to-br from-geo-panel/50 to-geo-panel/30 rounded-xl p-6 border border-geo-border">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div>
+								<h3 className="text-lg font-semibold mb-3">Available Agents</h3>
+								<div className="space-y-2">
+									{['Product Strategy', 'UI/UX Design', 'Frontend Dev', 'Backend Security', 'DevOps'].map((agent) => (
+										<div key={agent} className="flex items-center gap-2 p-2 bg-geo-panel/40 rounded-lg">
+											<div className="h-2 w-2 rounded-full bg-green-500" />
+											<span className="text-sm">{agent}</span>
+										</div>
+									))}
+								</div>
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold mb-3">Quick Actions</h3>
+								<div className="space-y-3">
+									<button
+										className="w-full p-3 bg-geo-accent-blue/20 hover:bg-geo-accent-blue/30 border border-geo-accent-blue/40 rounded-lg transition-colors"
+										onClick={() => fetch('/api/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'orchestrate' }) })}
+									>
+										Start New Project
+									</button>
+									<button
+										className="w-full p-3 bg-geo-accent-orange/20 hover:bg-geo-accent-orange/30 border border-geo-accent-orange/40 rounded-lg transition-colors"
+										onClick={() => fetch('/api/agents')}
+									>
+										Check Agent Status
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
 		</div>
 	);
 }
