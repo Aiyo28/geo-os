@@ -1,27 +1,56 @@
 {
-  "name": "geo-os-next",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "next": "15.5.3"
-  },
-  "devDependencies": {
-    "typescript": "^5",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.3",
-    "@eslint/eslintrc": "^3"
-  }
+	"name": "geo-os-next",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint": "next lint"
+	},
+	"dependencies": {
+		"@deck.gl/aggregation-layers": "^8.9.35",
+		"@deck.gl/geo-layers": "^8.9.35",
+		"@deck.gl/layers": "^8.9.35",
+		"@deck.gl/react": "^8.9.35",
+		"@radix-ui/react-dialog": "^1.0.5",
+		"@radix-ui/react-select": "^2.0.0",
+		"@radix-ui/react-slot": "^1.0.2",
+		"@tensorflow/tfjs": "^4.22.0",
+		"@turf/turf": "^7.2.0",
+		"autoprefixer": "^10.4.21",
+		"class-variance-authority": "^0.7.0",
+		"clsx": "^2.1.0",
+		"csv-parse": "^6.1.0",
+		"d3-array": "^3.2.4",
+		"date-fns": "^4.1.0",
+		"deck.gl": "^8.9.35",
+		"framer-motion": "^11.0.3",
+		"h3-js": "^4.3.0",
+		"isolation-forest": "^0.0.9",
+		"lucide-react": "^0.344.0",
+		"maplibre-gl": "2.4.0",
+		"next": "14.2.3",
+		"papaparse": "^5.5.3",
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"react-map-gl": "^7.1.7",
+		"react-spring": "^10.0.1",
+		"recharts": "^3.2.0",
+		"simple-statistics": "^7.8.8",
+		"tailwind-merge": "^2.2.1",
+		"tailwindcss-animate": "^1.0.7"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.55.0",
+		"@types/geojson": "^7946.0.16",
+		"@types/node": "^20",
+		"@types/react": "^18.2.0",
+		"@types/react-dom": "^18.2.0",
+		"eslint": "^8",
+		"eslint-config-next": "14.2.3",
+		"postcss": "^8",
+		"tailwindcss": "^3",
+		"typescript": "^5"
+	}
 }
