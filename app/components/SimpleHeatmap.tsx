@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Map } from 'react-map-gl/maplibre';
 import { DeckGL } from '@deck.gl/react';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as h3 from 'h3-js';
 
@@ -37,6 +37,7 @@ export default function SimpleHeatmap({
 }: SimpleHeatmapProps) {
 	const [gridData, setGridData] = useState([]);
 	const [loading, setLoading] = useState(false);
+	const [viewState, setViewState] = useState(WORLD_VIEW_STATE);
 
 	useEffect(() => {
 		if (!dataLoaded) return;
@@ -44,13 +45,52 @@ export default function SimpleHeatmap({
 		const fetchData = async () => {
 			setLoading(true);
 			try {
+				// Add small delay to ensure data processing is complete
+				await new Promise(resolve => setTimeout(resolve, 500));
+
 				const res = await fetch('/api/grid');
 				if (res.ok) {
 					const data = await res.json();
 					// Handle new API response format with metadata
 					const gridData = data.grid || data;
 					console.log(`SimpleHeatmap: Received ${gridData.length} grid cells`, data.metadata);
-					setGridData(gridData);
+
+					// Only update if we got valid data
+					if (gridData && gridData.length > 0) {
+						setGridData(gridData);
+
+						// Calculate bounds from the data and set view
+						const lats = gridData.map((cell: any) => {
+							try {
+								const [lat] = h3.cellToLatLng(cell.h3);
+								return lat;
+							} catch {
+								return null;
+							}
+						}).filter(Boolean);
+
+						const lngs = gridData.map((cell: any) => {
+							try {
+								const [, lng] = h3.cellToLatLng(cell.h3);
+								return lng;
+							} catch {
+								return null;
+							}
+						}).filter(Boolean);
+
+						if (lats.length > 0 && lngs.length > 0) {
+							const centerLat = (Math.max(...lats) + Math.min(...lats)) / 2;
+							const centerLng = (Math.max(...lngs) + Math.min(...lngs)) / 2;
+
+							setViewState({
+								longitude: centerLng,
+								latitude: centerLat,
+								zoom: 12,
+								pitch: 0,
+								bearing: 0,
+							});
+						}
+					}
 				}
 			} catch (error) {
 				console.error('Error fetching data:', error);
@@ -62,29 +102,20 @@ export default function SimpleHeatmap({
 		fetchData();
 	}, [dataLoaded, forecastHorizon]);
 
-	// Convert H3 data to scatterplot points
-	const scatterData = gridData
-		.map((cell: any) => {
-			try {
-				const [lat, lng] = h3.cellToLatLng(cell.h3);
-				return {
-					position: [lng, lat],
-					trips: cell.trips || 0,
-					h3: cell.h3,
-				};
-			} catch {
-				return null;
-			}
-		})
-		.filter(Boolean);
+	// Prepare H3 hexagon data
+	const hexagonData = gridData.map((cell: any) => ({
+		hex: cell.h3,
+		trips: cell.trips || 0,
+	}));
 
 	// Handle case when no data is available
-	if (scatterData.length === 0) {
+	if (hexagonData.length === 0) {
 		return (
 			<div className="w-full h-full relative">
 				<DeckGL
 					layers={[]}
-					initialViewState={INITIAL_VIEW_STATE}
+					viewState={viewState}
+					onViewStateChange={({ viewState }) => setViewState(viewState)}
 					controller={true}
 				>
 					<Map mapStyle={MAP_STYLE} />
@@ -109,28 +140,26 @@ export default function SimpleHeatmap({
 		);
 	}
 
-	const maxTrips = Math.max(...scatterData.map((d: any) => d.trips), 1);
+	const maxTrips = Math.max(...hexagonData.map((d: any) => d.trips), 1);
 
 	const layers = [
-		new ScatterplotLayer({
-			id: 'heatmap-layer',
-			data: scatterData,
+		new H3HexagonLayer({
+			id: 'h3-hexagon-layer',
+			data: hexagonData,
 			pickable: true,
-			opacity: 0.7,
-			stroked: false,
+			wireframe: false,
 			filled: true,
-			radiusScale: 1,
-			radiusMinPixels: 8,
-			radiusMaxPixels: 60,
-			getPosition: (d: any) => d.position,
-			getRadius: (d: any) => Math.max((d.trips / maxTrips) * 40 + 10, 10),
+			extruded: false,
+			getHexagon: (d: any) => d.hex,
 			getFillColor: (d: any) => {
 				const intensity = d.trips / maxTrips;
-				if (intensity < 0.2) return [74, 144, 226, 180]; // Blue
-				if (intensity < 0.5) return [255, 193, 7, 180]; // Yellow
-				if (intensity < 0.8) return [255, 152, 0, 180]; // Orange
-				return [244, 67, 54, 200]; // Red
+				if (intensity < 0.2) return [74, 144, 226, 200]; // Blue
+				if (intensity < 0.5) return [255, 193, 7, 200]; // Yellow
+				if (intensity < 0.8) return [255, 152, 0, 200]; // Orange
+				return [244, 67, 54, 220]; // Red
 			},
+			getLineColor: [255, 255, 255, 80],
+			lineWidthMinPixels: 1,
 		}),
 	];
 
@@ -139,7 +168,8 @@ export default function SimpleHeatmap({
 			<div className="w-full h-full relative">
 				<DeckGL
 					layers={[]}
-					initialViewState={WORLD_VIEW_STATE}
+					viewState={viewState}
+					onViewStateChange={({ viewState }) => setViewState(viewState)}
 					controller={true}
 				>
 					<Map mapStyle={MAP_STYLE} />
@@ -168,7 +198,8 @@ export default function SimpleHeatmap({
 			<div className="w-full h-full relative">
 				<DeckGL
 					layers={[]}
-					initialViewState={INITIAL_VIEW_STATE}
+					viewState={viewState}
+					onViewStateChange={({ viewState }) => setViewState(viewState)}
 					controller={true}
 				>
 					<Map mapStyle={MAP_STYLE} />
@@ -190,37 +221,42 @@ export default function SimpleHeatmap({
 	}
 
 	return (
-		<div className="w-full h-full">
+		<div className="w-full h-full relative">
 			<DeckGL
 				layers={layers}
-				initialViewState={INITIAL_VIEW_STATE}
+				viewState={viewState}
+				onViewStateChange={({ viewState }) => setViewState(viewState)}
 				controller={true}
 				getTooltip={({ object }) =>
-					object ? `H3: ${object.h3}\nTrips: ${object.trips}` : null
+					object ? `H3: ${object.hex}\nTrips: ${object.trips}` : null
 				}
 			>
 				<Map mapStyle={MAP_STYLE} />
 			</DeckGL>
 
-			{/* Simple legend */}
-			<div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 text-xs">
+			{/* Legend moved to bottom right */}
+			<div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 text-xs shadow-lg border border-gray-200">
 				<div className="font-semibold mb-2">Demand Heatmap</div>
 				<div className="space-y-1">
 					<div className="flex items-center gap-2">
-						<div className="w-3 h-3 rounded-full bg-blue-500"></div>
-						<span>Low ({Math.round(maxTrips * 0.3)})</span>
+						<div className="w-4 h-3 bg-blue-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+						<span>Low ({Math.round(maxTrips * 0.2)})</span>
 					</div>
 					<div className="flex items-center gap-2">
-						<div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-						<span>Medium ({Math.round(maxTrips * 0.7)})</span>
+						<div className="w-4 h-3 bg-yellow-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+						<span>Medium ({Math.round(maxTrips * 0.5)})</span>
 					</div>
 					<div className="flex items-center gap-2">
-						<div className="w-3 h-3 rounded-full bg-red-500"></div>
-						<span>High ({maxTrips})</span>
+						<div className="w-4 h-3 bg-orange-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+						<span>High ({Math.round(maxTrips * 0.8)})</span>
+					</div>
+					<div className="flex items-center gap-2">
+						<div className="w-4 h-3 bg-red-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+						<span>Peak ({maxTrips})</span>
 					</div>
 				</div>
-				<div className="mt-2 pt-2 border-t text-gray-500">
-					Points: {scatterData.length}
+				<div className="mt-2 pt-2 border-t border-gray-200 text-gray-500">
+					Hexagons: {hexagonData.length}
 				</div>
 			</div>
 		</div>
