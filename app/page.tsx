@@ -19,6 +19,8 @@ export default function Page() {
 	> | null>(null);
 	const [dataLoaded, setDataLoaded] = useState(false);
 	const [forecastHorizon, setForecastHorizon] = useState('1h');
+	const [simulationMode, setSimulationMode] = useState<'current' | 'optimized'>('current');
+	const [hasSimulationData, setHasSimulationData] = useState(false);
 
 	const fetchKpis = useCallback(async () => {
 		try {
@@ -59,6 +61,9 @@ export default function Page() {
 				const data = await res.json();
 				setSimulationResult(data);
 				setKpis(data.kpi_after);
+				setHasSimulationData(true);
+				// Stay in current mode initially - user can toggle
+				setSimulationMode('current');
 			} else {
 				console.error('Simulation failed:', res.status, res.statusText);
 			}
@@ -160,15 +165,120 @@ export default function Page() {
 				</div>
 			</section>
 
-			{/* Controls */}
+			{/* Controls & Simulation Results - Dynamic Layout */}
 			<section className="container mx-auto px-4">
-				<div className="max-w-md mx-auto">
-					<ControlBar
-						onSimulate={runSimulation}
-						forecastHorizon={forecastHorizon}
-						setForecastHorizon={setForecastHorizon}
-					/>
-				</div>
+				{/* Before simulation: Centered controls */}
+				{!hasSimulationData && (
+					<div className="flex justify-center max-w-2xl mx-auto">
+						<ControlBar
+							onSimulate={runSimulation}
+							forecastHorizon={forecastHorizon}
+							setForecastHorizon={setForecastHorizon}
+						/>
+					</div>
+				)}
+
+				{/* After simulation: Two column layout */}
+				{hasSimulationData && (
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
+						{/* Left Side - Controls */}
+						<div className="space-y-4">
+							<ControlBar
+								onSimulate={runSimulation}
+								forecastHorizon={forecastHorizon}
+								setForecastHorizon={setForecastHorizon}
+							/>
+
+							{/* Simulation Mode Toggle */}
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2 text-sm">
+										<span className="h-2 w-2 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 geo-glow-blue" />
+										Simulation View
+									</CardTitle>
+								</CardHeader>
+								<CardContent>
+									<div className="flex items-center justify-center gap-2">
+										<Button
+											variant={simulationMode === 'current' ? 'default' : 'outline'}
+											size="sm"
+											onClick={() => setSimulationMode('current')}
+											className="flex-1"
+										>
+											Current Demand
+										</Button>
+										<Button
+											variant={simulationMode === 'optimized' ? 'default' : 'outline'}
+											size="sm"
+											onClick={() => setSimulationMode('optimized')}
+											className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+										>
+											Optimized
+										</Button>
+									</div>
+									<p className="text-xs text-center text-muted-foreground mt-2">
+										{simulationMode === 'current'
+											? 'Showing original demand distribution'
+											: `Showing optimized distribution (${simulationResult?.relocated_trips || 0} trips relocated)`
+										}
+									</p>
+								</CardContent>
+							</Card>
+						</div>
+
+						{/* Right Side - Simulation Results */}
+						{simulationResult && (
+							<div className="space-y-4">
+								<Card className="h-fit">
+									<CardHeader>
+										<CardTitle className="flex items-center gap-2 text-sm">
+											<span className="h-2 w-2 rounded-full bg-gradient-to-br from-geo-accent-orange to-geo-accent-blue geo-glow-orange" />
+											Simulation Results
+										</CardTitle>
+									</CardHeader>
+									<CardContent>
+										<div className="space-y-3">
+											{/* KPI Summary */}
+											<div className="grid grid-cols-2 gap-4 text-xs">
+												<div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
+													<div className="font-semibold text-blue-700 dark:text-blue-300 mb-1">Before Optimization</div>
+													<div className="space-y-1 text-blue-600 dark:text-blue-400">
+														<div>ETA: {simulationResult?.kpi_before?.eta_avg || 0} min</div>
+														<div>Coverage: {((simulationResult?.kpi_before?.util_avg || 0) * 100).toFixed(0)}%</div>
+														<div>Demand Gap: {simulationResult?.kpi_before?.demand_supply_gap || 0}</div>
+													</div>
+												</div>
+												<div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+													<div className="font-semibold text-green-700 dark:text-green-300 mb-1">After Optimization</div>
+													<div className="space-y-1 text-green-600 dark:text-green-400">
+														<div>ETA: {simulationResult?.kpi_after?.eta_avg || 0} min</div>
+														<div>Coverage: {((simulationResult?.kpi_after?.util_avg || 0) * 100).toFixed(0)}%</div>
+														<div>Demand Gap: {simulationResult?.kpi_after?.demand_supply_gap || 0}</div>
+													</div>
+												</div>
+											</div>
+
+											{/* Impact Summary */}
+											<div className="bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-950/20 dark:to-blue-950/20 rounded-lg p-3">
+												<div className="font-semibold text-gray-800 dark:text-gray-200 text-sm mb-2">Optimization Impact</div>
+												<div className="flex items-center justify-between text-xs">
+													<span className="text-gray-600 dark:text-gray-400">Trips Relocated:</span>
+													<span className="font-bold text-orange-600 dark:text-orange-400">{simulationResult?.relocated_trips || 0}</span>
+												</div>
+												<div className="flex items-center justify-between text-xs mt-1">
+													<span className="text-gray-600 dark:text-gray-400">ETA Change:</span>
+													<span className="font-bold text-red-600 dark:text-red-400">
+														+{((simulationResult?.kpi_after?.eta_avg || 0) - (simulationResult?.kpi_before?.eta_avg || 0)).toFixed(1)} min
+													</span>
+												</div>
+											</div>
+										</div>
+									</CardContent>
+								</Card>
+							</div>
+						)}
+					</div>
+				)}
 			</section>
 
 			{/* KPIs */}
@@ -188,27 +298,6 @@ export default function Page() {
 				)}
 			</section>
 
-			{/* Simulation Results */}
-			{simulationResult && (
-				<section className="container mx-auto px-4">
-					<Card className="w-full">
-						<CardHeader>
-							<CardTitle className="flex items-center gap-2">
-								<span className="h-2 w-2 rounded-full bg-gradient-to-br from-geo-accent-orange to-geo-accent-blue geo-glow-orange" />
-								Simulation Results
-							</CardTitle>
-						</CardHeader>
-						<CardContent>
-							<div className="bg-black/30 border border-geo-border rounded-xl p-4 text-xs font-mono text-geo-text-muted max-h-[300px] overflow-auto">
-								<pre>
-									{JSON.stringify(simulationResult, null, 2)}
-								</pre>
-							</div>
-						</CardContent>
-					</Card>
-				</section>
-			)}
-
 			{/* Map */}
 			<section className="mt-8 border-t border-geo-border bg-geo-panel/70">
 				<div className="container mx-auto px-4 py-8">
@@ -222,6 +311,8 @@ export default function Page() {
 						<SimpleHeatmap
 							dataLoaded={dataLoaded}
 							forecastHorizon={forecastHorizon}
+							simulationMode={simulationMode}
+							simulationResult={simulationResult}
 						/>
 					</div>
 					<div className="mt-3 flex items-center gap-2 text-xs text-geo-text-muted">

@@ -107,5 +107,13 @@ export function runSimulation(recommendations: any[], relocateShare: number) {
     // 5. Recalculate KPIs on the *simulated* grid
     const kpi_after = calculateKPIs(simGrid);
 
-    return { kpi_before, kpi_after, relocated_trips: relocatedTrips };
+    // 6. Prepare simulated grid data for visualization
+    const simulatedGridArray = Array.from(simGrid.values());
+
+    return {
+        kpi_before,
+        kpi_after,
+        relocated_trips: relocatedTrips,
+        simulated_grid: simulatedGridArray
+    };
 }

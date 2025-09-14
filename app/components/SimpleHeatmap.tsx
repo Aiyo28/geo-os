@@ -29,11 +29,15 @@ const WORLD_VIEW_STATE = {
 interface SimpleHeatmapProps {
 	dataLoaded: boolean;
 	forecastHorizon: string;
+	simulationMode?: 'current' | 'optimized';
+	simulationResult?: Record<string, unknown> | null;
 }
 
 export default function SimpleHeatmap({
 	dataLoaded,
 	forecastHorizon,
+	simulationMode = 'current',
+	simulationResult,
 }: SimpleHeatmapProps) {
 	const [gridData, setGridData] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -100,13 +104,25 @@ export default function SimpleHeatmap({
 		};
 
 		fetchData();
-	}, [dataLoaded, forecastHorizon]);
+	}, [dataLoaded, forecastHorizon, simulationMode, simulationResult]);
 
-	// Prepare H3 hexagon data
-	const hexagonData = gridData.map((cell: any) => ({
-		hex: cell.h3,
-		trips: cell.trips || 0,
-	}));
+	// Prepare H3 hexagon data based on simulation mode
+	const getDataForMode = () => {
+		if (simulationMode === 'optimized' && simulationResult?.simulated_grid) {
+			return (simulationResult.simulated_grid as any[]).map((cell: any) => ({
+				hex: cell.h3,
+				trips: cell.trips || 0,
+				isSimulated: true,
+			}));
+		}
+		return gridData.map((cell: any) => ({
+			hex: cell.h3,
+			trips: cell.trips || 0,
+			isSimulated: false,
+		}));
+	};
+
+	const hexagonData = getDataForMode();
 
 	// Handle case when no data is available
 	if (hexagonData.length === 0) {
@@ -153,13 +169,34 @@ export default function SimpleHeatmap({
 			getHexagon: (d: any) => d.hex,
 			getFillColor: (d: any) => {
 				const intensity = d.trips / maxTrips;
-				if (intensity < 0.2) return [74, 144, 226, 200]; // Blue
-				if (intensity < 0.5) return [255, 193, 7, 200]; // Yellow
-				if (intensity < 0.8) return [255, 152, 0, 200]; // Orange
-				return [244, 67, 54, 220]; // Red
+				let baseColor;
+
+				if (simulationMode === 'optimized') {
+					// Distinct green-based color scheme for optimized mode
+					if (intensity < 0.2) baseColor = [46, 125, 50]; // Dark Green
+					else if (intensity < 0.5) baseColor = [102, 187, 106]; // Medium Green
+					else if (intensity < 0.8) baseColor = [156, 204, 101]; // Light Green
+					else baseColor = [255, 235, 59]; // Bright Yellow for peak optimization
+
+					return [...baseColor, 240]; // Higher opacity for optimized
+				} else {
+					// Original blue-to-red scheme for current mode
+					if (intensity < 0.2) baseColor = [74, 144, 226]; // Blue
+					else if (intensity < 0.5) baseColor = [255, 193, 7]; // Yellow
+					else if (intensity < 0.8) baseColor = [255, 152, 0]; // Orange
+					else baseColor = [244, 67, 54]; // Red
+
+					return [...baseColor, 200];
+				}
 			},
-			getLineColor: [255, 255, 255, 80],
-			lineWidthMinPixels: 1,
+			getLineColor: (d: any) => {
+				// Thicker white border for simulated hexagons
+				if (simulationMode === 'optimized') {
+					return [255, 255, 255, 120];
+				}
+				return [255, 255, 255, 80];
+			},
+			lineWidthMinPixels: simulationMode === 'optimized' ? 2 : 1,
 		}),
 	];
 
@@ -236,24 +273,59 @@ export default function SimpleHeatmap({
 
 			{/* Legend moved to bottom right */}
 			<div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 text-xs shadow-lg border border-gray-200">
-				<div className="font-semibold mb-2">Demand Heatmap</div>
+				<div className="font-semibold mb-2 flex items-center gap-2">
+					{simulationMode === 'optimized' ? (
+						<>
+							<span className="h-2 w-2 rounded-full bg-green-500"></span>
+							Optimized Demand
+						</>
+					) : (
+						<>
+							<span className="h-2 w-2 rounded-full bg-blue-500"></span>
+							Current Demand
+						</>
+					)}
+				</div>
 				<div className="space-y-1">
-					<div className="flex items-center gap-2">
-						<div className="w-4 h-3 bg-blue-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
-						<span>Low ({Math.round(maxTrips * 0.2)})</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="w-4 h-3 bg-yellow-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
-						<span>Medium ({Math.round(maxTrips * 0.5)})</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="w-4 h-3 bg-orange-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
-						<span>High ({Math.round(maxTrips * 0.8)})</span>
-					</div>
-					<div className="flex items-center gap-2">
-						<div className="w-4 h-3 bg-red-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
-						<span>Peak ({maxTrips})</span>
-					</div>
+					{simulationMode === 'optimized' ? (
+						<>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-green-800 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Low ({Math.round(maxTrips * 0.2)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-green-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Medium ({Math.round(maxTrips * 0.5)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-green-300 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>High ({Math.round(maxTrips * 0.8)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-yellow-300 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Peak ({maxTrips})</span>
+							</div>
+						</>
+					) : (
+						<>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-blue-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Low ({Math.round(maxTrips * 0.2)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-yellow-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Medium ({Math.round(maxTrips * 0.5)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-orange-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>High ({Math.round(maxTrips * 0.8)})</span>
+							</div>
+							<div className="flex items-center gap-2">
+								<div className="w-4 h-3 bg-red-500 border border-white/50" style={{clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)'}}></div>
+								<span>Peak ({maxTrips})</span>
+							</div>
+						</>
+					)}
 				</div>
 				<div className="mt-2 pt-2 border-t border-gray-200 text-gray-500">
 					Hexagons: {hexagonData.length}
