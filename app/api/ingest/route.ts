@@ -31,9 +31,12 @@ export async function POST(request: NextRequest) {
 			// In production, you'd want to save to a proper file system or database
 			result = await ingestCSVFromContent(fileContent, file.name);
 		} else {
-			// Use sample data as fallback
+			// Use sample data as fallback - fetch from public directory for Vercel
 			console.log('No file provided, using sample data');
-			result = await ingestCSV('data/astana_sample_small.csv');
+			const sampleDataUrl = `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/astana_sample_small.csv`;
+			const response = await fetch(sampleDataUrl);
+			const sampleContent = await response.text();
+			result = await ingestCSVFromContent(sampleContent, 'astana_sample_small.csv');
 		}
 
 		console.log('Ingestion complete:', result);
