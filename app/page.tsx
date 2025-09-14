@@ -219,7 +219,7 @@ export default function Page() {
 									<p className="text-xs text-center text-muted-foreground mt-2">
 										{simulationMode === 'current'
 											? 'Showing original demand distribution'
-											: `Showing optimized distribution (${simulationResult?.relocated_trips || 0} trips relocated)`
+											: `Showing optimized distribution (${(simulationResult as any)?.relocated_trips || 0} trips relocated)`
 										}
 									</p>
 								</CardContent>
@@ -243,17 +243,17 @@ export default function Page() {
 												<div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3">
 													<div className="font-semibold text-blue-700 dark:text-blue-300 mb-1">Before Optimization</div>
 													<div className="space-y-1 text-blue-600 dark:text-blue-400">
-														<div>ETA: {simulationResult?.kpi_before?.eta_avg || 0} min</div>
-														<div>Coverage: {((simulationResult?.kpi_before?.util_avg || 0) * 100).toFixed(0)}%</div>
-														<div>Demand Gap: {simulationResult?.kpi_before?.demand_supply_gap || 0}</div>
+														<div>ETA: {(simulationResult as any)?.kpi_before?.eta_avg || 0} min</div>
+														<div>Coverage: {(((simulationResult as any)?.kpi_before?.util_avg || 0) * 100).toFixed(0)}%</div>
+														<div>Demand Gap: {(simulationResult as any)?.kpi_before?.demand_supply_gap || 0}</div>
 													</div>
 												</div>
 												<div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
 													<div className="font-semibold text-green-700 dark:text-green-300 mb-1">After Optimization</div>
 													<div className="space-y-1 text-green-600 dark:text-green-400">
-														<div>ETA: {simulationResult?.kpi_after?.eta_avg || 0} min</div>
-														<div>Coverage: {((simulationResult?.kpi_after?.util_avg || 0) * 100).toFixed(0)}%</div>
-														<div>Demand Gap: {simulationResult?.kpi_after?.demand_supply_gap || 0}</div>
+														<div>ETA: {(simulationResult as any)?.kpi_after?.eta_avg || 0} min</div>
+														<div>Coverage: {(((simulationResult as any)?.kpi_after?.util_avg || 0) * 100).toFixed(0)}%</div>
+														<div>Demand Gap: {(simulationResult as any)?.kpi_after?.demand_supply_gap || 0}</div>
 													</div>
 												</div>
 											</div>
@@ -263,12 +263,12 @@ export default function Page() {
 												<div className="font-semibold text-gray-800 dark:text-gray-200 text-sm mb-2">Optimization Impact</div>
 												<div className="flex items-center justify-between text-xs">
 													<span className="text-gray-600 dark:text-gray-400">Trips Relocated:</span>
-													<span className="font-bold text-orange-600 dark:text-orange-400">{simulationResult?.relocated_trips || 0}</span>
+													<span className="font-bold text-orange-600 dark:text-orange-400">{(simulationResult as any)?.relocated_trips || 0}</span>
 												</div>
 												<div className="flex items-center justify-between text-xs mt-1">
 													<span className="text-gray-600 dark:text-gray-400">ETA Change:</span>
 													<span className="font-bold text-red-600 dark:text-red-400">
-														+{((simulationResult?.kpi_after?.eta_avg || 0) - (simulationResult?.kpi_before?.eta_avg || 0)).toFixed(1)} min
+														+{(((simulationResult as any)?.kpi_after?.eta_avg || 0) - ((simulationResult as any)?.kpi_before?.eta_avg || 0)).toFixed(1)} min
 													</span>
 												</div>
 											</div>

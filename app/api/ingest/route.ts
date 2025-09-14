@@ -83,9 +83,10 @@ async function ingestCSVFromContent(content: string, filename: string) {
 
 	// Process each row
 	for (const r of rows) {
-		const lat = parseFloat(r.lat);
-		const lng = parseFloat(r.lng);
-		const spd = parseFloat(r.spd);
+		const row = r as any; // Type assertion since CSV parser returns unknown
+		const lat = parseFloat(row.lat);
+		const lng = parseFloat(row.lng);
+		const spd = parseFloat(row.spd);
 
 		// Basic validation (adjust bounds as needed)
 		if (
@@ -96,8 +97,8 @@ async function ingestCSVFromContent(content: string, filename: string) {
 			lat > 90 ||
 			lng < -180 ||
 			lng > 180 ||
-			!r.randomized_id ||
-			r.seq === undefined ||
+			!row.randomized_id ||
+			row.seq === undefined ||
 			spd < 0 ||
 			spd > 200
 		) {
@@ -105,15 +106,15 @@ async function ingestCSVFromContent(content: string, filename: string) {
 			continue;
 		}
 
-		if (!trajectories.has(r.randomized_id)) {
-			trajectories.set(r.randomized_id, []);
+		if (!trajectories.has(row.randomized_id)) {
+			trajectories.set(row.randomized_id, []);
 		}
-		trajectories.get(r.randomized_id).push(r);
+		trajectories.get(row.randomized_id).push(row);
 	}
 
 	// Process trajectories and populate grid
 	for (const [id, points] of trajectories.entries()) {
-		points.sort((a, b) => parseInt(a.seq) - parseInt(b.seq));
+		points.sort((a: any, b: any) => parseInt(a.seq) - parseInt(b.seq));
 
 		let totalDistance = 0;
 		let totalDuration = 0;

@@ -14,7 +14,7 @@ export function getAllForecasts() {
     return [];
   }
 
-  const forecasts = Array.from(currentGrid.values()).map(cell => {
+  const forecasts = Array.from(currentGrid.values()).map((cell: any) => {
     // For now, predicted demand is current demand as there's no time series
     const demandPred = cell.trips || 0;
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Map } from 'react-map-gl/maplibre';
-import { DeckGL } from '@deck.gl/react';
+import DeckGL from '@deck.gl/react';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as h3 from 'h3-js';

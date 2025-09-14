@@ -206,7 +206,7 @@ export function findAnomalies(from?: string, to?: string): AnomalyData[] {
 	const detector = new SafetyAnomalyDetector();
 	let allAnomalies: AnomalyData[] = [];
 
-	const trajectories = Array.from(STATE.trajectories.values());
+	const trajectories = Array.from(STATE.trajectories.values()) as Trajectory[];
 
 	// Per-trajectory anomalies
 	for (const trajectory of trajectories) {
