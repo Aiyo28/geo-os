@@ -33,10 +33,22 @@ export async function POST(request: NextRequest) {
 		} else {
 			// Use sample data as fallback - fetch from public directory for Vercel
 			console.log('No file provided, using sample data');
-			const sampleDataUrl = `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/astana_sample_small.csv`;
-			const response = await fetch(sampleDataUrl);
-			const sampleContent = await response.text();
-			result = await ingestCSVFromContent(sampleContent, 'astana_sample_small.csv');
+			const baseUrl = new URL(request.url).origin;
+			const sampleDataUrl = `${baseUrl}/astana_sample_small.csv`;
+			console.log('Fetching sample data from:', sampleDataUrl);
+
+			try {
+				const response = await fetch(sampleDataUrl);
+				if (!response.ok) {
+					throw new Error(`Failed to fetch sample data: ${response.status}`);
+				}
+				const sampleContent = await response.text();
+				console.log('Sample data loaded, length:', sampleContent.length);
+				result = await ingestCSVFromContent(sampleContent, 'astana_sample_small.csv');
+			} catch (fetchError) {
+				console.error('Failed to fetch sample data:', fetchError);
+				throw new Error('Sample data unavailable');
+			}
 		}
 
 		console.log('Ingestion complete:', result);
