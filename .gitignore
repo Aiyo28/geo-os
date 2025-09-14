@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# large data files
+data/astana_geo_reduced.csv
+data/geo_locations_astana_hackathon
+
+# test results
+test-results/
